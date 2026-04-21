@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quick Memo</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="icon" href="data:,">
     <style>
         body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; background-color: #f4f4f9; }
         .container { width: 100%; max-width: 500px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -39,10 +40,9 @@
     // --- Supabaseの設定 ---
     const SUPABASE_URL = 'https://oquamvazgfyctprqmwsw.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xdWFtdmF6Z2Z5Y3RwcnFtd3N3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3ODAyMjcsImV4cCI6MjA5MjM1NjIyN30.iP5wQZoYBdD78Lbwd0S3i93tLreDTGXUBJB2Oo0XDJs';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    
-    // グローバルな supabase オブジェクトから client を作成
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // 変数名を 'supabaseClient' に変更して衝突を回避
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentKey = "";
 
@@ -53,12 +53,12 @@
         currentKey = keyInput;
         
         try {
-            // supabaseClient を使用
+            // maybeSingle() はデータがなくてもエラーにならず null を返すので便利です
             const { data, error } = await supabaseClient
                 .from('memos')
                 .select('content')
                 .eq('key', currentKey)
-                .maybeSingle(); // single() より安全な maybeSingle() を推奨
+                .maybeSingle();
 
             if (error) throw error;
 
@@ -67,8 +67,8 @@
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('memo-screen').classList.remove('hidden');
         } catch (err) {
-            console.error(err);
-            alert("エラーが発生しました。コンソールを確認してください。");
+            console.error("Fetch Error:", err);
+            alert("データの読み込みに失敗しました。URLとKeyが正しいか確認してください。");
         }
     }
 
@@ -83,8 +83,8 @@
             if (error) throw error;
             alert("保存しました！");
         } catch (err) {
-            console.error(err);
-            alert("保存に失敗しました");
+            console.error("Save Error:", err);
+            alert("保存に失敗しました。テーブル設定や権限(RLS)を確認してください。");
         }
     }
 
