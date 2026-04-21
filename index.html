@@ -72,19 +72,32 @@
         }
     }
 
-    async function saveMemo() {
-        const content = document.getElementById('memo-content').value;
+async function saveMemo() {
+        const content = document.getElementById('memo-content').value.trim();
 
         try {
-            const { error } = await supabaseClient
-                .from('memos')
-                .upsert({ key: currentKey, content: content });
+            if (content === "") {
+                // --- 1. 中身が空ならデータを削除する ---
+                const { error } = await supabaseClient
+                    .from('memos')
+                    .delete()
+                    .eq('key', currentKey);
 
-            if (error) throw error;
-            alert("保存しました！");
+                if (error) throw error;
+                alert("内容が空だったため、メモを削除しました。");
+                backToLogin(); // 削除したらログイン画面に戻る
+            } else {
+                // --- 2. 中身があれば保存（上書き）する ---
+                const { error } = await supabaseClient
+                    .from('memos')
+                    .upsert({ key: currentKey, content: content });
+
+                if (error) throw error;
+                alert("保存しました！");
+            }
         } catch (err) {
-            console.error("Save Error:", err);
-            alert("保存に失敗しました。テーブル設定や権限(RLS)を確認してください。");
+            console.error("Save/Delete Error:", err);
+            alert("操作に失敗しました。");
         }
     }
 
