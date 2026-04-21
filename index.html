@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Memo</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; background-color: #f4f4f9; }
+        .container { width: 100%; max-width: 500px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .hidden { display: none; }
+        input, textarea { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        textarea { height: 300px; resize: vertical; }
+        button { width: 100%; padding: 10px; cursor: pointer; background: #3ecf8e; color: white; border: none; border-radius: 4px; font-weight: bold; }
+        button:hover { background: #34b27b; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="login-screen">
+        <h2>メモを開く</h2>
+        <input type="text" id="memo-key" placeholder="好きな文字列（コード）を入力...">
+        <button onclick="loadMemo()">メモを開く / 作成</button>
+    </div>
+
+    <div id="memo-screen" class="hidden">
+        <div class="header">
+            <span id="display-key" style="font-weight: bold; color: #666;"></span>
+            <button onclick="backToLogin()" style="width: auto; padding: 5px 10px; background: #666;">戻る</button>
+        </div>
+        <textarea id="memo-content" placeholder="ここにメモを入力..."></textarea>
+        <button onclick="saveMemo()">保存する</button>
+    </div>
+</div>
+
+<script>
+    // --- Supabaseの設定 ---
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+    const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let currentKey = "";
+
+    // メモを読み込む
+    async function loadMemo() {
+        const keyInput = document.getElementById('memo-key').value.trim();
+        if (!keyInput) return alert("コードを入力してください");
+
+        currentKey = keyInput;
+        
+        // Supabaseからデータを取得
+        const { data, error } = await supabase
+            .from('memos')
+            .select('content')
+            .eq('key', currentKey)
+            .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116は「データなし」のエラー
+            console.error(error);
+            return alert("データの取得に失敗しました");
+        }
+
+        // 画面切り替え
+        document.getElementById('display-key').innerText = `Code: ${currentKey}`;
+        document.getElementById('memo-content').value = data ? data.content : "";
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('memo-screen').classList.remove('hidden');
+    }
+
+    // メモを保存する
+    async function saveMemo() {
+        const content = document.getElementById('memo-content').value;
+
+        // upsert: なければ挿入、あれば更新
+        const { error } = await supabase
+            .from('memos')
+            .upsert({ key: currentKey, content: content });
+
+        if (error) {
+            console.error(error);
+            alert("保存に失敗しました");
+        } else {
+            alert("保存しました！");
+        }
+    }
+
+    function backToLogin() {
+        document.getElementById('login-screen').classList.remove('hidden');
+        document.getElementById('memo-screen').classList.add('hidden');
+        document.getElementById('memo-key').value = "";
+    }
+</script>
+
+</body>
+</html>
