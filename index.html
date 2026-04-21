@@ -40,49 +40,51 @@
     const SUPABASE_URL = 'https://oquamvazgfyctprqmwsw.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xdWFtdmF6Z2Z5Y3RwcnFtd3N3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3ODAyMjcsImV4cCI6MjA5MjM1NjIyN30.iP5wQZoYBdD78Lbwd0S3i93tLreDTGXUBJB2Oo0XDJs';
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // グローバルな supabase オブジェクトから client を作成
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentKey = "";
 
-    // メモを読み込む
     async function loadMemo() {
         const keyInput = document.getElementById('memo-key').value.trim();
         if (!keyInput) return alert("コードを入力してください");
 
         currentKey = keyInput;
         
-        // Supabaseからデータを取得
-        const { data, error } = await supabase
-            .from('memos')
-            .select('content')
-            .eq('key', currentKey)
-            .single();
+        try {
+            // supabaseClient を使用
+            const { data, error } = await supabaseClient
+                .from('memos')
+                .select('content')
+                .eq('key', currentKey)
+                .maybeSingle(); // single() より安全な maybeSingle() を推奨
 
-        if (error && error.code !== 'PGRST116') { // PGRST116は「データなし」のエラー
-            console.error(error);
-            return alert("データの取得に失敗しました");
+            if (error) throw error;
+
+            document.getElementById('display-key').innerText = `Code: ${currentKey}`;
+            document.getElementById('memo-content').value = data ? data.content : "";
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('memo-screen').classList.remove('hidden');
+        } catch (err) {
+            console.error(err);
+            alert("エラーが発生しました。コンソールを確認してください。");
         }
-
-        // 画面切り替え
-        document.getElementById('display-key').innerText = `Code: ${currentKey}`;
-        document.getElementById('memo-content').value = data ? data.content : "";
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('memo-screen').classList.remove('hidden');
     }
 
-    // メモを保存する
     async function saveMemo() {
         const content = document.getElementById('memo-content').value;
 
-        // upsert: なければ挿入、あれば更新
-        const { error } = await supabase
-            .from('memos')
-            .upsert({ key: currentKey, content: content });
+        try {
+            const { error } = await supabaseClient
+                .from('memos')
+                .upsert({ key: currentKey, content: content });
 
-        if (error) {
-            console.error(error);
-            alert("保存に失敗しました");
-        } else {
+            if (error) throw error;
             alert("保存しました！");
+        } catch (err) {
+            console.error(err);
+            alert("保存に失敗しました");
         }
     }
 
